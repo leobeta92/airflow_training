@@ -2,7 +2,7 @@ from airflow.sdk import dag, task
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.sdk.bases.sensor import PokeReturnValue
 
-# This creates a task in postgres.
+# This creates a task in postgres. Need to call the function in code so it will show up in UI.
 @dag
 def user_processing():
 
@@ -35,15 +35,9 @@ def user_processing():
             fake_user = None
         return PokeReturnValue(is_done=condition, xcom_value=fake_user)
 
-# Uses task decorator. Exact same as using PythonOperator.
+# Uses task decorator. Exact same as using PythonOperator. Recommended when we want to run Python code.
     @task
-    def extract_user():
-        #  ti = task instance that can take data from another/previous task. ti is a reserved keyword.
-        # fake_user = ti.xcom_pull(task_ids="is_api_available")
-
-        import requests
-        response = requests.get('https://raw.githubusercontent.com/marclamberti/datasets/refs/heads/main/fakeuser.json')
-        fake_user = response.json()
+    def extract_user(fake_user):
 
         return {
             'id': fake_user['id'],
@@ -53,7 +47,9 @@ def user_processing():
         }
 
 
-    is_api_available()
+    fake_user = is_api_available()
+    # Need to call function for it to show up in UI.
+    user_info = extract_user(fake_user)
 
 user_processing()
 
