@@ -1,19 +1,6 @@
 from airflow.sdk import dag, task
 from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.sdk.bases.sensor import PokeReturnValue
-from airflow.providers.standard.operators.python import PythonOperator
-
-# Extracts user
-def _extract_user(ti):
-    #  ti = task instance that can take data from another/previous task. ti is a reserved keyword.
-    fake_user = ti.xcom_pull(task_ids="is_api_available")
-
-    return {
-        'id': fake_user['id'],
-        'first_name': fake_user['personalInfo']['firstname'],
-        'last_name': fake_user['personalInfo']['lastname'],
-        'email': fake_user['personalInfo']['email']
-    }
 
 # This creates a task in postgres.
 @dag
@@ -48,10 +35,23 @@ def user_processing():
             fake_user = None
         return PokeReturnValue(is_done=condition, xcom_value=fake_user)
 
-    extract_user = PythonOperator(
-         task_id = 'extract_user',
-         python_callable= _extract_user
-    )
+# Uses task decorator. Exact same as using PythonOperator.
+    @task
+    def extract_user():
+        #  ti = task instance that can take data from another/previous task. ti is a reserved keyword.
+        # fake_user = ti.xcom_pull(task_ids="is_api_available")
+
+        import requests
+        response = requests.get('https://raw.githubusercontent.com/marclamberti/datasets/refs/heads/main/fakeuser.json')
+        fake_user = response.json()
+
+        return {
+            'id': fake_user['id'],
+            'first_name': fake_user['personalInfo']['firstname'],
+            'last_name': fake_user['personalInfo']['lastname'],
+            'email': fake_user['personalInfo']['email']
+        }
+
 
     is_api_available()
 
