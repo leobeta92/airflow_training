@@ -3,10 +3,13 @@ from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.sdk.bases.sensor import PokeReturnValue
 from airflow.providers.postgres.hooks.postgres import PostgresHook 
 
-# This creates a task in postgres. Need to call the function in code so it will show up in UI.
+# An operator describes a single task in a workflow.
+
+# This is the dag decorator used to define a dag.
 @dag
 def user_processing():
-
+    
+    # This operator runs a SQL query with postgres after creating a connection with the service. These operators exist for other services like GCP.
     create_table = SQLExecuteQueryOperator(
         task_id = 'create_table',
         conn_id="postgres",
@@ -21,7 +24,9 @@ def user_processing():
 """
     )
 
-# This will check the API condition every 30 seconds.
+# A sensor is a long-running task waiting for an event to happen. A poke function is called every n seconds to check if the criteria are met.
+
+# This will check the API condition every 30 seconds. Waits for it to be true.
 # This task is a sensor which uses a task decorator.
     @task.sensor(poke_interval=30, timeout=300)
     def is_api_available() -> PokeReturnValue:
@@ -42,8 +47,8 @@ def user_processing():
 
         return {
             'id': fake_user['id'],
-            'first_name': fake_user['personalInfo']['firstname'],
-            'last_name': fake_user['personalInfo']['lastname'],
+            'first_name': fake_user['personalInfo']['firstName'],
+            'last_name': fake_user['personalInfo']['lastName'],
             'email': fake_user['personalInfo']['email']
         }
 
@@ -52,13 +57,6 @@ def user_processing():
 
         import csv
         from datetime import datetime as dt
-        # Test info
-        user_info = {
-            'id': "123",
-            'first_name':"John",
-            'last_name': "Doe",
-            'email': "johnemail@email.com"
-        }
 
         user_info['created_at'] = dt.now().strftime('%Y-%m-%d %H:%M:%S')
         with open('/tmp/user_info.csv', 'w', newline='') as csvfile:
@@ -66,6 +64,7 @@ def user_processing():
             writer.writeheader()
             writer.writerow(user_info) 
 
+    # A hook is used when we want to run methods that are not included in the operator. 
     @task
     def store_user():
         hook = PostgresHook(postgres_conn_id='postgres')
